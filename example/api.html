@@ -2,7 +2,6 @@
 <html>
 <head>
 	<title>birJS Api Example</title>
-	<link rel="icon" type="image/png" href="../docs/static_files/birJS_logo.png.png">
 	<!-- Socket IO -->
 	<script src='https://cdnjs.cloudflare.com/ajax/libs/socket.io/2.1.1/socket.io.js'></script>
 	<!-- Google webRTC adapter -->
@@ -51,9 +50,9 @@
 <body>
 	
 	<h1><a href="https://github.com/geobir/birJS">birJS</a> Example, for an API</h1>
+	<p>If the news has a red border that's meen the data come from the Api, if it's green it's come from another client.</p>
 	<button id="send" onclick="getAPI('API/business')" >getAPI business news</button>
 	<div id="news">
-		News Her:
 	</div>
 	<script type="text/javascript">
 		bir = birJS();
