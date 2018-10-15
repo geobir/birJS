@@ -1,0 +1,24 @@
+{
+  "name": "birJS-Server",
+  "version": "0.1.0",
+  "description": "The birJS server, connect multiple peers via socket IO",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "test": "echo \"Error: no test specified, TODO\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/geobir/birJS.git"
+  },
+  "author": "Geoffrey BIR",
+  "dependencies": {
+    "node-static": "^0.7.10",
+    "socket.io": "^2.1.1"
+  },
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/geobir/birJS/issues"
+  },
+  "homepage": "https://github.com/geobir/birJS"
+}
