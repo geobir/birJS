@@ -19,6 +19,7 @@
 *.orig
 .vagrant
 node_modules/
+*.log
 
 #---------------------------------------#
 # Linux Ignores                         #

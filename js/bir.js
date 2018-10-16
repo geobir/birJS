@@ -30,7 +30,6 @@ function birJS(
 
 	this.socketServer = socketServer;
 	this.socketPort = socketPort;
-	// this.socketServerPort = socketServer + ":" + socketPort;
 	this.configuration = configuration;
 	this.hashFunction = hashFunction;
 	this.peers = [];
@@ -272,7 +271,7 @@ function birJS(
 			callback(event.detail.datas, event.detail.from);
 		});
 		for (var i = 0; i < this.peers.length; i++) {
-			if (this.peers[i].channel) {
+			if (this.peers[i].channel && this.peers[i].channel.readyState == 'open') {
 				this.peers[i].channel.send("getDataNews_%_"+url);
 				return ;
 			}
