@@ -69,7 +69,6 @@ function birJS(
 	// Start: Join or create a room
 	socketIO.emit('create_or_join', this.room);
 
-
 	/**
 	 * Create a Peer coonection with another brother
 	 * @param  {string}		The sockeIO ID
@@ -80,9 +79,8 @@ function birJS(
 		this.debug ? console.log('Creating Peer connection to ' + IO_ID  + ' config:', config):null;
 		var newPeerConnection = new RTCPeerConnection(config);
 
-		// send any ice candidates to the other peer
+		// send any ice candidates to an other peer
 		newPeerConnection.onicecandidate = function (event) {
-			// console.log('onIceCandidate event:', event);
 			if (event.candidate) {
 				sendSignalingMessage(IO_ID, {
 					type: 'candidate',
@@ -101,7 +99,7 @@ function birJS(
 
 		this.debug ? console.log('Creating an offer'):null;
 		newPeerConnection.createOffer(function (datas){ onLocalSessionCreated(datas, IO_ID, newPeerConnection)}, logError);
-		return this.peers.push({id: IO_ID, peer: newPeerConnection, channel: dataChannel});
+		return this.peers.push({id: IO_ID, peer: newPeerConnection, channel: dataChannel, datas:[]});
 	}
 
 	/**
@@ -131,14 +129,13 @@ function birJS(
 		newPeerConnection.ondatachannel = function (event) {
 			this.debug ? console.log('ondatachannel:', event.channel):null;
 			onDataChannelCreated(event.channel);
-			peer = peerFromID(IO_ID);
+			peer = this.getPeer(IO_ID);
 			if (peer) {
 				peer.channel = event.channel;
 			}
 		};
-		return this.peers.push({id: IO_ID, peer: newPeerConnection, channel: null});
+		return this.peers.push({id: IO_ID, peer: newPeerConnection, channel: null, datas:[]});
 	}
-
 
 	/**
 	 * get the data of an API from peers or server if no one have the data ask.
@@ -152,6 +149,7 @@ function birJS(
 			if (this.readyState == 4 && this.status == 200) {
 				var data = this.responseText;
 				thisParent.datas[url] = data;
+				thisParent.sendToPeers("haveData" + "_%_" + url);
 				this.debug ? console.log("onreadystatechange:", thisParent.datas, url, data):null;
     			thisParent.dispatchEvent(new CustomEvent('datas:' + url, {detail: {datas: data, from: "fromAPI"}}));
 			}
@@ -176,7 +174,10 @@ function birJS(
 				getDataFromAPI(data[1]);
 			} else if (data.length > 1 && data[0] == "giveData"){
 				this.datas[data[1]] = data[2];
+				this.sendToPeers("haveData" + "_%_" + data[1]);
 				this.dispatchEvent(new CustomEvent('datas:' + data[1], {detail: {datas: this.datas[data[1]], from: "fromPeer"}}));
+			} else if (data.length > 1 && data[0] == "haveData"){
+				this.getPeerFromChannel(channel).datas.push(data[1]);
 			} else if (data.length > 1 && data[0] == "getDataNews"){
 				if (this.datas.hasOwnProperty(data[1])) {
 					channel.send("giveData" + "_%_" + data[1] + "_%_" + this.datas[data[1]]);
@@ -203,10 +204,10 @@ function birJS(
 	 * @param  {string}		The message
 	 */
 	function signalingMessageCallback(id, message) {
-		peer = peerFromID(id);
+		peer = this.getPeer(id);
 		if (!peer) {
 			connectPeerConnection(id, configuration);
-			peer = peerFromID(id);
+			peer = this.getPeer(id);
 			this.debug ? console.log("The peer is now created:", peer):null;
 		}
 		if (message.type === 'offer') {
@@ -225,19 +226,6 @@ function birJS(
 	}
 
 	/**
-	 * Return the peer connection from his socketIO ID
-	 * @param  {string}		The socket IO ID of the peer
-	 * @return {peer}		The peer you ask for
-	 */
-	function peerFromID(id){
-		for (var i = this.peers.length - 1; i >= 0; i--) {
-			if (this.peers[i].id == id)
-				return this.peers[i];
-		}
-		return null;
-	}
-
-	/**
 	 * When a session is created with a peer.
 	 * @param  {Object}		The description of the answer
 	 * @param  {string}		The socket IO ID
@@ -251,9 +239,24 @@ function birJS(
 		}, logError);
 	}
 
-	// TODO
-	this.send = function (data, peer) {
-		console.log("TODO this.send",data, peer);
+	/**
+	 * Sending datas to a peer
+	 * @param  {Object} peer The peer targeted
+	 * @param  {String} data the string you want to send
+	 */
+	this.sendToPeer = function (peer, data) {
+		peer.channel.send(data);
+	}
+	/**
+	 * Sending datas to all peers
+	 * @param  {String} data the string you want to send
+	 */
+	this.sendToPeers = function (data) {
+		for (var i = 0; i < this.peers.length; i++) {
+			if(this.peers[i].channel.readyState == 'open') {
+				this.peers[i].channel.send(data);
+			}
+		}
 	}
 
 	/**
@@ -267,26 +270,56 @@ function birJS(
 		var event = new Event('datas:' + url);
 		//get from url check hash with server if come frome other client
 		this.addEventListener('datas:' + url, function (event){
-			this.debug ? console.log("<======> <======> <======> <======>", event):null;
+			this.debug ? console.log("datas", event):null;
 			callback(event.detail.datas, event.detail.from);
 		});
 		for (var i = 0; i < this.peers.length; i++) {
-			if (this.peers[i].channel && this.peers[i].channel.readyState == 'open') {
-				this.peers[i].channel.send("getDataNews_%_"+url);
+			if (this.peers[i].channel && this.peers[i].channel.readyState == 'open' && this.peers[i].datas.includes(url)) {
+				this.peers[i].channel.send("getDataNews" + "_%_" + url);
 				return ;
 			}
 		}
 		getDataFromAPI(url);
 		// callback(this.datas, "nobody");
 	}
+
 	/**
 	 * Return to you the list of all peers you are connected to.
-	 * @return {peers[]}	the list of all peers
+	 * @return {Array}		the list of all peers
 	 */
 	this.getPeers = function () {
 		this.debug ? console.log("this.getPeers"):null;
 		return this.peers;
 	}
+
+	/**
+	 * Return the peer from his socketIO ID
+	 * @param  {String}		The socket IO ID of the peer
+	 * @return {Array}		The peer you ask for
+	 */
+	this.getPeer = function (id){
+		for (var i = this.peers.length - 1; i >= 0; i--) {
+			if (this.peers[i].id == id) {
+				return this.peers[i];
+			}
+		}
+		return null;
+	}
+
+	/**
+	 * Get a peer from the channel
+	 * @param  {Object} channel The channel of the targeted peer
+	 * @return {Array}			The peer you ask for
+	 */
+	this.getPeerFromChannel = function (channel){
+		for (var i = this.peers.length - 1; i >= 0; i--) {
+			if (this.peers[i].channel == channel) {
+				return this.peers[i];
+			}
+		}
+		return null;
+	}
+
 	/**
 	 * Return the datas you stock.
 	 * @return {Object}		All datas
@@ -295,6 +328,7 @@ function birJS(
 		this.debug ? console.log("this.getDatas"):null;
 		return this.datas;
 	}
+
 	/**
 	 * Help to debug, you can set the debug to true or false
 	 * @param {bool}		The debug value
