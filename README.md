@@ -4,6 +4,18 @@
 </p>
 birJS is a JavaScript library, who share datas via a peer to peer chanel.
 
+
+## How it's work
+Using WebRTC we connect clients to make peer to peer connection possible and easy.
+<p align="center">
+ <img src="docs/static_files/birJS_explain00.png">
+</p>
+
+The library give developers an **easy way** to get data from the **peer to peer** network.
+
+The idea behind is to **remove** the bigest part of the **data redundancy** of the network.
+
+
 ## Installation
 * Git clone the repository
 * You are going to need nodeJS and npm
