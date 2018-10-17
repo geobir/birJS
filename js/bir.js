@@ -79,19 +79,7 @@ function birJS(
 		this.debug ? console.log('Creating Peer connection to ' + IO_ID  + ' config:', config):null;
 		var newPeerConnection = new RTCPeerConnection(config);
 
-		// send any ice candidates to an other peer
-		newPeerConnection.onicecandidate = function (event) {
-			if (event.candidate) {
-				sendSignalingMessage(IO_ID, {
-					type: 'candidate',
-					label: event.candidate.sdpMLineIndex,
-					id: event.candidate.sdpMid,
-					candidate: event.candidate.candidate
-				});
-			} else {
-				this.debug ? console.log('End of candidates.'):null;
-			}
-		};
+		onIceCandidate(newPeerConnection, IO_ID);
 
 		this.debug ? console.log('Creating Data Channel'):null;
 		dataChannel = newPeerConnection.createDataChannel("birJS");
@@ -112,19 +100,7 @@ function birJS(
 		this.debug ? console.log('Connect Peer connection to ' + IO_ID  + ' config:', config):null;
 		var newPeerConnection = new RTCPeerConnection(config);
 
-		// send any ice candidates to the other peer
-		newPeerConnection.onicecandidate = function (event) {
-			if (event.candidate) {
-				sendSignalingMessage(IO_ID, {
-					type: 'candidate',
-					label: event.candidate.sdpMLineIndex,
-					id: event.candidate.sdpMid,
-					candidate: event.candidate.candidate
-				});
-			} else {
-				this.debug ? console.log('End of candidates.'):null;
-			}
-		};
+		onIceCandidate(newPeerConnection, IO_ID);
 
 		newPeerConnection.ondatachannel = function (event) {
 			this.debug ? console.log('ondatachannel:', event.channel):null;
@@ -135,6 +111,27 @@ function birJS(
 			}
 		};
 		return this.peers.push({id: IO_ID, peer: newPeerConnection, channel: null, datas:[]});
+	}
+
+	/**
+	 * Create a onIceCandidate for peer
+	 * @param  {Object} peer The targeted peer
+	 * @param  {String} ID   His ID
+	 */
+	function onIceCandidate(peer, ID) {
+		peer.onicecandidate = function(event) {
+			this.debug ? console.log('>> onicecandidate', event):null;
+			if (event.candidate) {
+				sendSignalingMessage(ID, {
+					type: 'candidate',
+					label: event.candidate.sdpMLineIndex,
+					id: event.candidate.sdpMid,
+					candidate: event.candidate.candidate
+				});
+			} else {
+				this.debug ? console.log('End of candidates.'):null;
+			}
+		}
 	}
 
 	/**
@@ -178,6 +175,12 @@ function birJS(
 				this.dispatchEvent(new CustomEvent('datas:' + data[1], {detail: {datas: this.datas[data[1]], from: "fromPeer"}}));
 			} else if (data.length > 1 && data[0] == "haveData"){
 				this.getPeerFromChannel(channel).datas.push(data[1]);
+			} else if (data.length > 1 && data[0] == "removeMyData"){
+				peer = this.getPeerFromChannel(channel);
+				index = peer.datas.indexOf(data[1]);
+				if (index >= 0) {
+					peer.datas.splice(index);
+				}
 			} else if (data.length > 1 && data[0] == "getDataNews"){
 				if (this.datas.hasOwnProperty(data[1])) {
 					channel.send("giveData" + "_%_" + data[1] + "_%_" + this.datas[data[1]]);
@@ -253,7 +256,7 @@ function birJS(
 	 */
 	this.sendToPeers = function (data) {
 		for (var i = 0; i < this.peers.length; i++) {
-			if(this.peers[i].channel.readyState == 'open') {
+			if(this.peers[i].channel && this.peers[i].channel.readyState == 'open') {
 				this.peers[i].channel.send(data);
 			}
 		}
@@ -274,7 +277,9 @@ function birJS(
 			callback(event.detail.datas, event.detail.from);
 		});
 		for (var i = 0; i < this.peers.length; i++) {
+			this.debug ? console.log("peer", this.peers[i], url, this.peers[i].channel && this.peers[i].channel.readyState == 'open' && this.peers[i].datas.includes(url)):null;
 			if (this.peers[i].channel && this.peers[i].channel.readyState == 'open' && this.peers[i].datas.includes(url)) {
+				this.debug ? console.log("======================== ><><>>< Data Found from peer ><><><>< ========================"):null;
 				this.peers[i].channel.send("getDataNews" + "_%_" + url);
 				return ;
 			}
@@ -337,15 +342,14 @@ function birJS(
 		this.debug = debug;
 	}
 
-	// TODO
 	/**
-	 * Remove the data from a specifique url
+	 * Remove the data
 	 * @param  {string}		the url you whant to remove
 	 * @return {bool}		True if the data existe and have been delete else false
 	 */
-	this.resetData = function(url) {
-		console.log("TODO this.resetData",data, peer);
-		// reset data of a specifique data
+	this.removeData = function(url) {
+		delete this.datas[url];
+		this.sendToPeers("removeMyData" + "_%_" + url);
 	}
 
 	return this;
