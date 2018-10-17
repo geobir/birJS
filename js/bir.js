@@ -135,23 +135,31 @@ function birJS(
 	}
 
 	/**
-	 * get the data of an API from peers or server if no one have the data ask.
-	 * Get the API from the server.
-	 * @param  {string}		The url of the API you want to get
+	 * Get the data from an URL.
+	 * @param  {string}		The url of the URL you want to get in binnary
 	 */
-	function getDataFromAPI(url){
+	function getDataFromURL(url){
 		var tmpxmlhttp = new XMLHttpRequest();
 		thisParent = this;
-		tmpxmlhttp.onreadystatechange = function() {
-			if (this.readyState == 4 && this.status == 200) {
-				var data = this.responseText;
+		this.debug ? console.log("====== ><><>>< Data ask to the URL ><><><>< ======"):null;
+		tmpxmlhttp.onerror = function(e) { console.error("Error in loading data from url:", url, e); };
+		tmpxmlhttp.onload = function(e){
+			if (this.status == 200) {
+				var uInt8Array = new Uint8Array(this.response);
+				var i = uInt8Array.length;
+				var biStr = new Array(i);
+				while (i-- > 0) {
+					biStr[i] = String.fromCharCode(uInt8Array[i]);
+				}
+				var data = biStr.join('');
 				thisParent.datas[url] = data;
 				thisParent.sendToPeers("haveData" + "_%_" + url);
-				this.debug ? console.log("onreadystatechange:", thisParent.datas, url, data):null;
-    			thisParent.dispatchEvent(new CustomEvent('datas:' + url, {detail: {datas: data, from: "fromAPI"}}));
+     			thisParent.dispatchEvent(new CustomEvent('datas:' + url, {detail: {datas: data, from: "fromURL"}}));
+     			tmpxmlhttp.onerror = function(e) { console.error("Error in loading data from url:", url, e); };
 			}
 		};
 		tmpxmlhttp.open("GET", url, true);
+		tmpxmlhttp.responseType = 'arraybuffer';
 		tmpxmlhttp.send();
 	}
 
@@ -168,8 +176,9 @@ function birJS(
 			this.debug ? console.log("channel.onmessage :", message):null;
 			data = message.data.split("_%_");
 			if (data.length > 1 && data[0] == "noData"){
-				getDataFromAPI(data[1]);
+				getDataFromURL(data[1]);
 			} else if (data.length > 1 && data[0] == "giveData"){
+				this.debug ? console.log("giveData :", data[1]):null;
 				this.datas[data[1]] = data[2];
 				this.sendToPeers("haveData" + "_%_" + data[1]);
 				this.dispatchEvent(new CustomEvent('datas:' + data[1], {detail: {datas: this.datas[data[1]], from: "fromPeer"}}));
@@ -183,7 +192,9 @@ function birJS(
 				}
 			} else if (data.length > 1 && data[0] == "getDataNews"){
 				if (this.datas.hasOwnProperty(data[1])) {
+					this.debug ? console.log("getDataNews :", data[1]):null;
 					channel.send("giveData" + "_%_" + data[1] + "_%_" + this.datas[data[1]]);
+					this.debug ? console.log("getDataNews :", data[1]):null;
 				} else {
 					channel.send("noData" + "_%_" + data[1]);
 				}
@@ -263,15 +274,19 @@ function birJS(
 	}
 
 	/**
-	 * Give you the API data from server or peers.
-	 * @param  {string}		The url of the API
-	 * @param  {Function}	The callback function
-	 * @param  {Function}	TODO :: The hash function you used
+	 * Give you the data of the URL from server or peers.
+	 * @param  {string}		url			The url
+	 * @param  {Function}	callback	The callback function who will received the binnary answer
+	 * @param  {Function}	hash		TODO :: The hash function you used
 	 */
 	this.get = function (url, callback, hash=null){
 		this.debug ? console.log("this.get", url):null;
+		// TODO check timeline / Hash of data
+		if (this.datas.hasOwnProperty(url)) {
+			callback(this.datas[url], "fromMe");
+			return ;
+		}
 		var event = new Event('datas:' + url);
-		//get from url check hash with server if come frome other client
 		this.addEventListener('datas:' + url, function (event){
 			this.debug ? console.log("datas", event):null;
 			callback(event.detail.datas, event.detail.from);
@@ -284,8 +299,7 @@ function birJS(
 				return ;
 			}
 		}
-		getDataFromAPI(url);
-		// callback(this.datas, "nobody");
+		getDataFromURL(url);
 	}
 
 	/**
