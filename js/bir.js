@@ -17,6 +17,7 @@ function logError(err) {
  * @param  {Object}		The Configuration of the iceServers
  * @param  {Function}	The hash function you whant to use (TODO)
  * @param  {String}		The SocketIO room you want to connect
+ * @param  {String}		The way to save [var, cache{default}] datas
  * @param  {Boolean}	The debug node
  * @return {Object}		himself
  */
@@ -26,6 +27,7 @@ function birJS(
 	configuration={'iceServers': [{'urls': 'stun:stun.l.google.com:19302'}]},
 	hashFunction=hashCode,
 	room=window.location.pathname,
+	save="cache",
 	debug=false) {
 
 	this.socketServer = socketServer;
@@ -35,6 +37,7 @@ function birJS(
 	this.peers = [];
 	this.datas = {};
 	this.room=room;
+	this.save=save;
 	this.debug = debug;
 
 
@@ -152,7 +155,7 @@ function birJS(
 					biStr[i] = String.fromCharCode(uInt8Array[i]);
 				}
 				var data = biStr.join('');
-				thisParent.datas[url] = data;
+				thisParent.save(url, data);
 				thisParent.sendToPeers("haveData" + "_%_" + url);
      			thisParent.dispatchEvent(new CustomEvent('datas:' + url, {detail: {datas: data, from: "fromURL"}}));
      			tmpxmlhttp.onerror = function(e) { console.error("Error in loading data from url:", url, e); };
@@ -179,9 +182,9 @@ function birJS(
 				getDataFromURL(data[1]);
 			} else if (data.length > 1 && data[0] == "giveData"){
 				this.debug ? console.log("giveData :", data[1]):null;
-				this.datas[data[1]] = data[2];
+				this.save(data[1], data[2]);
 				this.sendToPeers("haveData" + "_%_" + data[1]);
-				this.dispatchEvent(new CustomEvent('datas:' + data[1], {detail: {datas: this.datas[data[1]], from: "fromPeer"}}));
+				this.dispatchEvent(new CustomEvent('datas:' + data[1], {detail: {datas: this.getLocal(data[1]), from: "fromPeer"}}));
 			} else if (data.length > 1 && data[0] == "haveData"){
 				this.getPeerFromChannel(channel).datas.push(data[1]);
 			} else if (data.length > 1 && data[0] == "removeMyData"){
@@ -191,10 +194,9 @@ function birJS(
 					peer.datas.splice(index);
 				}
 			} else if (data.length > 1 && data[0] == "getDataNews"){
-				if (this.datas.hasOwnProperty(data[1])) {
+				if (this.getLocal(data[1])) {
 					this.debug ? console.log("getDataNews :", data[1]):null;
-					channel.send("giveData" + "_%_" + data[1] + "_%_" + this.datas[data[1]]);
-					this.debug ? console.log("getDataNews :", data[1]):null;
+					channel.send("giveData" + "_%_" + data[1] + "_%_" + this.getLocal(data[1]));
 				} else {
 					channel.send("noData" + "_%_" + data[1]);
 				}
@@ -282,8 +284,8 @@ function birJS(
 	this.get = function (url, callback, hash=null){
 		this.debug ? console.log("this.get", url):null;
 		// TODO check timeline / Hash of data
-		if (this.datas.hasOwnProperty(url)) {
-			callback(this.datas[url], "fromMe");
+		if (this.getLocal(url)) {
+			callback(this.getLocal(url), "fromMe");
 			return ;
 		}
 		var event = new Event('datas:' + url);
@@ -300,6 +302,31 @@ function birJS(
 			}
 		}
 		getDataFromURL(url);
+	}
+
+	/**
+	 * Get the local data with the key
+	 * @param  {String} key The key of the data you want, basicly the url
+	 * @return {String}     The data you ask for
+	 */
+	this.getLocal = function(key){
+		if (this.save == "var") {
+			return this.datas[key] ? this.datas.hasOwnProperty(key) : null;
+		}
+		return localStorage[key];
+	}
+
+	/**
+	 * Save data with the good methode
+	 * @param  {[type]} key  The key of the data, basicly the url
+	 * @param  {[type]} data The data
+	 */
+	this.save = function(key, data) {
+		if (this.save == "var") {
+			this.datas[key] = data;
+		} else {
+			localStorage[key] = data;
+		}
 	}
 
 	/**
@@ -339,14 +366,6 @@ function birJS(
 		return null;
 	}
 
-	/**
-	 * Return the datas you stock.
-	 * @return {Object}		All datas
-	 */
-	this.getDatas = function () {
-		this.debug ? console.log("this.getDatas"):null;
-		return this.datas;
-	}
 
 	/**
 	 * Help to debug, you can set the debug to true or false
@@ -362,7 +381,7 @@ function birJS(
 	 * @return {bool}		True if the data existe and have been delete else false
 	 */
 	this.removeData = function(url) {
-		delete this.datas[url];
+		delete localStorage[url] || this.datas[url];
 		this.sendToPeers("removeMyData" + "_%_" + url);
 	}
 
