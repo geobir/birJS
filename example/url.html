@@ -57,6 +57,7 @@
 	<h1><a href="https://github.com/geobir/birJS">birJS</a> Example, for get(url)</h1>
 	<p>If the news has a red border that's meen the data come from the Api, if it's green it's come from another client, blue mean it's come from localy.</p>
 	<button id="send" onclick="getAPI('API/business')" >getAPI business news</button>
+	<button id="send" onclick="getAPI('API/technology')" >getAPI technology news</button>
 	<button id="send" onclick="getImage('https://i.imgur.com/s1r4nqu.jpg?maxwidth=120&shape=thumb&fidelity=high')" >getimage</button>
 	<div id="news">
 	</div>
@@ -87,25 +88,67 @@
 		/**
 		 * The way of writing the API data,
 		 * use as callback function
-		 * @param  {string}
-		 * @param  {[type]}
-		 * @return {[type]}
+		 * @param  {string} url   The url call
+		 * @param  {Object} datas datas in binnary
+		 * @param  {string} from  where the data come from
 		 */
-		function printData(datas, from) {
+		function printData(url, datas, from) {
 			json = JSON.parse(datas);
 			resetDatas();
-			for (var i = 0; i < json.articles.length; i++) {
-				var div = document.createElement('div');
-				div.className = 'row';
-				div.innerHTML = "<a href='" + json.articles[i].url + "' title='" + json.articles[i].description + "' class='news-head " + from + "'><img src='" + (json.articles[i].urlToImage || "https://www.halawata.net/wp-content/themes/comouflage/asset/img/no-image.svg") + "'><h2>" + json.articles[i].title + "</h2></a>";
-				document.getElementById("news").appendChild(div);
-			}
+			getFromURL(url.replace('API', 'HASH'), function(err, data){
+				if (err !== null) {
+					console.log('Something went wrong: ' + err);
+				}
+				data = JSON.parse(data);
+				hashData = hashMe(JSON.stringify(json));
+				if (hashData != data['hash']) {
+					console.log("ERROR: The datas has been corrupted or old", hashData, data['hash']);
+					document.getElementById("news").innerHTML = "</br><p>The datas has been corrupted or old, the hash of the url(" + data['hash'] + ") and the hash of the data given(" + hashData + ") are different.</p>";
+				} else {
+					for (var i = 0; i < json.articles.length; i++) {
+						var div = document.createElement('div');
+						div.className = 'row';
+						div.innerHTML = "<a href='" + json.articles[i].url + "' title='" + json.articles[i].description + "' class='news-head " + from + "'><img src='" + (json.articles[i].urlToImage || "https://www.halawata.net/wp-content/themes/comouflage/asset/img/no-image.svg") + "'><h2>" + json.articles[i].title + "</h2></a>";
+						document.getElementById("news").appendChild(div);
+					}
+				}
+			});
 		}
 
-		function printImage(image, from) {
+		/**
+		 * A wayt of printing an image fron the lib
+		 * @param  {string} url   The url call
+		 * @param  {string} image The image in binnary
+		 * @param  {string} from  where the data come from
+		 */
+		function printImage(url, image, from) {
 			resetDatas();
 			document.getElementById("news").innerHTML = "<img class='" + from + "' src='data:image/png;base64," + window.btoa(image) + "' />";
 		}
+
+		// from https://stackoverflow.com/questions/7616461/generate-a-hash-from-string-in-javascript @lordvlad
+		hashMe = function(s){
+			return (s + '').split("").reduce(function(a,b){a=((a<<5)-a)+b.charCodeAt(0);return a&a},0);              
+		}
+
+		/**
+		 * Get datas from URL
+		 * @param  {String}   url      The url string
+		 * @param  {Function} callback Callback, I mean the function whent it's ready.
+		 */
+		var getFromURL = function(url, callback) {
+			var xhr = new XMLHttpRequest();
+			xhr.open('GET', url, true);
+			xhr.onload = function() {
+				var status = xhr.status;
+				if (status === 200) {
+					callback(null, xhr.response);
+				} else {
+					callback(status, xhr.response);
+				}
+			};
+			xhr.send();
+		};
 	</script>
 </body>
 </html>

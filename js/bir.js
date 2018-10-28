@@ -1,11 +1,6 @@
 
 /* =============================== Bir JS =============================== */
 
-// from https://stackoverflow.com/questions/7616461/generate-a-hash-from-string-in-javascript @lordvlad
-hashCode = function(s){
-  return s.split("").reduce(function(a,b){a=((a<<5)-a)+b.charCodeAt(0);return a&a},0);              
-}
-
 function logError(err) {
 	console.error("Error", err.toString());
 }
@@ -25,7 +20,7 @@ function birJS(
 	socketServer=window.location.host,
 	socketPort='10542',
 	configuration={'iceServers': [{'urls': 'stun:stun.l.google.com:19302'}]},
-	hashFunction=hashCode,
+	// hashFunction=hashCode,
 	room=window.location.pathname,
 	save="cache",
 	debug=false) {
@@ -33,7 +28,7 @@ function birJS(
 	this.socketServer = socketServer;
 	this.socketPort = socketPort;
 	this.configuration = configuration;
-	this.hashFunction = hashFunction;
+	// this.hashFunction = hashFunction;
 	this.peers = [];
 	this.datas = {};
 	this.room=room;
@@ -285,13 +280,13 @@ function birJS(
 		this.debug ? console.log("this.get", url):null;
 		// TODO check timeline / Hash of data
 		if (this.getLocal(url)) {
-			callback(this.getLocal(url), "fromMe");
+			callback(url, this.getLocal(url), "fromMe");
 			return ;
 		}
 		var event = new Event('datas:' + url);
 		this.addEventListener('datas:' + url, function (event){
 			this.debug ? console.log("datas", event):null;
-			callback(event.detail.datas, event.detail.from);
+			callback(url, event.detail.datas, event.detail.from);
 		});
 		for (var i = 0; i < this.peers.length; i++) {
 			this.debug ? console.log("peer", this.peers[i], url, this.peers[i].channel && this.peers[i].channel.readyState == 'open' && this.peers[i].datas.includes(url)):null;
