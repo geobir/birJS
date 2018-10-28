@@ -19,7 +19,7 @@ The idea behind is to **remove** the bigest part of the **data redundancy** of t
 ## Installation
 * Git clone the repository
 * You are going to need nodeJS and npm
-* on the server folder ``npm install``
+* on the server folder ``> npm install``
 * on your web html pasge add the js/bir.js script with ``2.1.1/socket.io.js`` and ``webrtc-adapter/6.4.0/adapter.js``
 
 
@@ -27,10 +27,15 @@ The idea behind is to **remove** the bigest part of the **data redundancy** of t
 
 
 ## Examples
-The folder example show you a brief example of how to use the birJS library.
-* Install the server,
-* Launch him ``npm start``
-* look the api.html page
+The folder **example** show you a brief example of how to use the birJS library.
+* Launch the server, ``> npm start`` from the server folder
+* look the url.html page
+* on the page you can load an API content or an image from the two buttons, the border color mean:
+* * red = data from the server
+* * green = data from another peer
+* * blue = data from local
+
+ps: you an see the debug mode buy uncomment the ligne 65: `` // bir.setDebug(true); `` of url.html
 
 
 ## Contributing
