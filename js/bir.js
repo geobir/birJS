@@ -319,7 +319,7 @@ function birJS(
 	 * @return {String}     	The data you ask for
 	 */
 	this.getLocalChunk = function(key, i, size) {
-
+		return this.getLocal(key).substring(i * size, size)
 	}
 
 	/**
@@ -349,10 +349,15 @@ function birJS(
 	 * @param  {String} key  The key of the data, basicly the url
 	 * @param  {String} data The data
 	 * @param  {Int} 	length [description]
-	 * @param  {int} 	x      [description]
+	 * @param  {int} 	i      [description]
 	 */
-	this.saveChunk = function(key, data, length, x) {
-
+	this.saveChunk = function(key, data, length, i) {
+		tmp = this.getLocal(key)
+		if (!tmp || tmp.length() != length) {
+			tmp = new Array(length + 1).join(" ");
+		}
+		tmp = tmp.substr(0, i) + data + tmp.substr(i + data.length);
+		this.save(key, tmp);
 	}
 
 	/**
