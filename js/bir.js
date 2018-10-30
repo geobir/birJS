@@ -304,7 +304,7 @@ function birJS(
 	 * @param  {String} key The key of the data you want, basicly the url
 	 * @return {String}     The data you ask for
 	 */
-	this.getLocal = function(key){
+	this.getLocal = function(key) {
 		if (this.save == "var") {
 			return this.datas[key] ? this.datas.hasOwnProperty(key) : null;
 		}
@@ -312,9 +312,29 @@ function birJS(
 	}
 
 	/**
+	 * Get a chunk of local data with the key
+	 * @param  {String} key 	The key of the data you want, basicly the url
+	 * @param  {Int} 	i 		The chunk you want
+	 * @param  {Int} 	size	The size of each chunk
+	 * @return {String}     	The data you ask for
+	 */
+	this.getLocalChunk = function(key, i, size) {
+
+	}
+
+	/**
+	 * Get the lenght of a data with the key
+	 * @param  {String} key The key of the data you want, basicly the url
+	 * @return {Int}     	The length of the data
+	 */
+	this.getLenghtOfData = function(key) {
+		return this.datas[key] = data.length;
+	}
+
+	/**
 	 * Save data with the good methode
-	 * @param  {[type]} key  The key of the data, basicly the url
-	 * @param  {[type]} data The data
+	 * @param  {String} key  The key of the data, basicly the url
+	 * @param  {String} data The data
 	 */
 	this.save = function(key, data) {
 		if (this.save == "var") {
@@ -322,6 +342,17 @@ function birJS(
 		} else {
 			localStorage[key] = data;
 		}
+	}
+
+	/**
+	 * Save only part of data
+	 * @param  {String} key  The key of the data, basicly the url
+	 * @param  {String} data The data
+	 * @param  {Int} 	length [description]
+	 * @param  {int} 	x      [description]
+	 */
+	this.saveChunk = function(key, data, length, x) {
+
 	}
 
 	/**
@@ -360,7 +391,6 @@ function birJS(
 		}
 		return null;
 	}
-
 
 	/**
 	 * Help to debug, you can set the debug to true or false
