@@ -173,23 +173,30 @@ function birJS(
 		channel.onmessage = message => {
 			this.debug ? console.log("channel.onmessage :", message):null;
 			data = message.data.split("_%_");
-			if (data.length > 1 && data[0] == "noData"){
+			if (data.length > 1 && data[0] == "noData") {
+				// TODO if no data = delete from this peer have the data
 				getDataFromURL(data[1]);
-			} else if (data.length > 1 && data[0] == "giveData"){
-				this.debug ? console.log("giveData :", data[1]):null;
-				this.save(data[1], data[2]);
-				this.sendToPeers("haveData" + "_%_" + data[1]);
-				this.dispatchEvent(new CustomEvent('datas:' + data[1], {detail: {datas: this.getLocal(data[1]), from: "fromPeer"}}));
-			} else if (data.length > 1 && data[0] == "haveData"){
+			} else if (data.length > 1 && data[0] == "giveData") {
+				// TODO if chunk save chunk
+				if (data.length > 2) {
+
+				} else {
+					this.debug ? console.log("giveData :", data[1]):null;
+					this.save(data[1], data[2]);
+					this.sendToPeers("haveData" + "_%_" + data[1]);
+					this.dispatchEvent(new CustomEvent('datas:' + data[1], {detail: {datas: this.getLocal(data[1]), from: "fromPeer"}}));
+				}
+			} else if (data.length > 1 && data[0] == "haveData") {
 				this.getPeerFromChannel(channel).datas.push(data[1]);
-			} else if (data.length > 1 && data[0] == "removeMyData"){
+			} else if (data.length > 1 && data[0] == "removeMyData") {
 				peer = this.getPeerFromChannel(channel);
 				index = peer.datas.indexOf(data[1]);
 				if (index >= 0) {
 					peer.datas.splice(index);
 				}
-			} else if (data.length > 1 && data[0] == "getDataNews"){
+			} else if (data.length > 1 && data[0] == "getDataNews") {
 				if (this.getLocal(data[1])) {
+					// TODO ADD CHUNK CUT IF TO BIG
 					this.debug ? console.log("getDataNews :", data[1]):null;
 					channel.send("giveData" + "_%_" + data[1] + "_%_" + this.getLocal(data[1]));
 				} else {
@@ -346,10 +353,10 @@ function birJS(
 
 	/**
 	 * Save only part of data
-	 * @param  {String} key  The key of the data, basicly the url
-	 * @param  {String} data The data
-	 * @param  {Int} 	length [description]
-	 * @param  {int} 	i      [description]
+	 * @param  {String} key  	The key of the data, basicly the url
+	 * @param  {String} data 	The data
+	 * @param  {Int} 	length 	The lenght of the final data
+	 * @param  {int} 	i      	Where the data need to be write
 	 */
 	this.saveChunk = function(key, data, length, i) {
 		tmp = this.getLocal(key)
