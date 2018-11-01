@@ -34,6 +34,7 @@ function birJS(
 	this.room=room;
 	this.save=save;
 	this.debug = debug;
+	this.sizeOfChunk = 10 * 1024; // in KB
 
 
 	// Connection to the server socket IO
@@ -178,10 +179,19 @@ function birJS(
 				getDataFromURL(data[1]);
 			} else if (data.length > 1 && data[0] == "giveData") {
 				// TODO if chunk save chunk
-				if (data.length > 2) {
-
+				if (data.length > 3) {
+					data[2] = parseFloat(data[2]);
+					data[3] = parseInt(data[3]);
+					this.debug ? console.log("giveData Chunk :", data[4].length, data[1], data[2], this.sizeOfChunk, data[3]):null;
+					this.saveChunk(data[1], data[4], (data[2] * this.sizeOfChunk), data[3]);
+					// /!\ /!\ /!\ If all chunks of data come from multiple peers, the condition need to be rewrite.
+					if (data[2] <= data[3] + 1) {
+						console.log("\nChunk finish !!!!!!!!!!!!!!!!!!!!\n");
+						this.sendToPeers("haveData" + "_%_" + data[1]);
+						this.dispatchEvent(new CustomEvent('datas:' + data[1], {detail: {datas: this.getLocal(data[1]), from: "fromPeer"}}));
+					}
 				} else {
-					this.debug ? console.log("giveData :", data[1]):null;
+					this.debug ? console.log("giveData :", data[1], data[2].length):null;
 					this.save(data[1], data[2]);
 					this.sendToPeers("haveData" + "_%_" + data[1]);
 					this.dispatchEvent(new CustomEvent('datas:' + data[1], {detail: {datas: this.getLocal(data[1]), from: "fromPeer"}}));
@@ -196,16 +206,27 @@ function birJS(
 				}
 			} else if (data.length > 1 && data[0] == "getDataNews") {
 				if (this.getLocal(data[1])) {
-					// TODO ADD CHUNK CUT IF TO BIG
 					this.debug ? console.log("getDataNews :", data[1]):null;
-					channel.send("giveData" + "_%_" + data[1] + "_%_" + this.getLocal(data[1]));
+					// The All Data to send
+					dataToSend = this.getLocal(data[1]);
+					console.log(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> TYPEOF ", typeof dataToSend, dataToSend.length);
+					// If the Data to send is to big for the webRTC Channel, we need to cut in chunk
+					if (dataToSend.length > this.sizeOfChunk ) {
+						numOfChunk = (dataToSend.length / this.sizeOfChunk);
+						for (var i = 0; i < numOfChunk; i++) {
+							chunkToSend = dataToSend.substring(i * this.sizeOfChunk, (i + 1) * this.sizeOfChunk);
+							console.log("SEND CHUNK: >>> ", numOfChunk, dataToSend.length, i, this.sizeOfChunk, chunkToSend.length);
+							channel.send("giveData" + "_%_" + data[1] + "_%_" + numOfChunk + "_%_" + i + "_%_" + chunkToSend);
+						}
+					} else {
+						channel.send("giveData" + "_%_" + data[1] + "_%_" + dataToSend);
+					}
 				} else {
 					channel.send("noData" + "_%_" + data[1]);
 				}
 			}
 		};
 	}
-
 	/**
 	 * Send to a specifique client via socket IO a message.
 	 * @param  {string}		The socket IO ID
@@ -287,6 +308,7 @@ function birJS(
 		this.debug ? console.log("this.get", url):null;
 		// TODO check timeline / Hash of data
 		if (this.getLocal(url)) {
+			console.log(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> TYPEOF ", typeof this.getLocal(url), this.getLocal(url).length);
 			callback(url, this.getLocal(url), "fromMe");
 			return ;
 		}
@@ -356,15 +378,24 @@ function birJS(
 	 * @param  {String} key  	The key of the data, basicly the url
 	 * @param  {String} data 	The data
 	 * @param  {Int} 	length 	The lenght of the final data
-	 * @param  {int} 	i      	Where the data need to be write
+	 * @param  {Int} 	i      	Where the data need to be write
 	 */
 	this.saveChunk = function(key, data, length, i) {
 		tmp = this.getLocal(key)
-		if (!tmp || tmp.length() != length) {
+		console.log("DEBUG:: ", data.length, length, i);
+		if (!tmp || tmp.length != length) {
+			console.log("CREATE NEW", (tmp && tmp.length));
 			tmp = new Array(length + 1).join(" ");
+			console.log(">>>", tmp.length);
 		}
-		tmp = tmp.substr(0, i) + data + tmp.substr(i + data.length);
-		this.save(key, tmp);
+		tmp2 = tmp.substr(0, i * this.sizeOfChunk) + data;
+		console.log(">>>", tmp.length);
+		if ((i + 2) * this.sizeOfChunk < length) {
+			console.log("ADD END");
+			tmp2 += tmp.substr((i + 1) * this.sizeOfChunk);
+			console.log(">>>", tmp.length);
+		}
+		this.save(key, tmp2);
 	}
 
 	/**
