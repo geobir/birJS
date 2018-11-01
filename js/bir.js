@@ -186,7 +186,6 @@ function birJS(
 					this.saveChunk(data[1], data[4], (data[2] * this.sizeOfChunk), data[3]);
 					// /!\ /!\ /!\ If all chunks of data come from multiple peers, the condition need to be rewrite.
 					if (data[2] <= data[3] + 1) {
-						console.log("\nChunk finish !!!!!!!!!!!!!!!!!!!!\n");
 						this.sendToPeers("haveData" + "_%_" + data[1]);
 						this.dispatchEvent(new CustomEvent('datas:' + data[1], {detail: {datas: this.getLocal(data[1]), from: "fromPeer"}}));
 					}
@@ -209,13 +208,12 @@ function birJS(
 					this.debug ? console.log("getDataNews :", data[1]):null;
 					// The All Data to send
 					dataToSend = this.getLocal(data[1]);
-					console.log(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> TYPEOF ", typeof dataToSend, dataToSend.length);
 					// If the Data to send is to big for the webRTC Channel, we need to cut in chunk
 					if (dataToSend.length > this.sizeOfChunk) {
 						numOfChunk = (dataToSend.length / this.sizeOfChunk);
 						for (var i = 0; i < numOfChunk; i++) {
 							chunkToSend = dataToSend.substring(i * this.sizeOfChunk, (i + 1) * this.sizeOfChunk);
-							console.log("SEND CHUNK: >>> ", numOfChunk, chunkToSend[0], dataToSend.length, i, this.sizeOfChunk, chunkToSend.length);
+							this.debug ? console.log("SEND CHUNK: >>> ", numOfChunk, dataToSend.length, i, this.sizeOfChunk, chunkToSend.length):null;
 							channel.send("giveData" + "_%_" + data[1] + "_%_" + numOfChunk + "_%_" + i + "_%_" + chunkToSend);
 						}
 					} else {
@@ -308,7 +306,6 @@ function birJS(
 		this.debug ? console.log("this.get", url):null;
 		// TODO check timeline / Hash of data
 		if (this.getLocal(url)) {
-			console.log(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> TYPEOF ", typeof this.getLocal(url), this.getLocal(url).length);
 			callback(url, this.getLocal(url), "fromMe");
 			return ;
 		}
@@ -382,18 +379,12 @@ function birJS(
 	 */
 	this.saveChunk = function(key, data, length, i) {
 		tmp = this.getLocal(key)
-		console.log("DEBUG:: ", data.length, length, i);
 		if (!tmp || tmp.length != length) {
-			console.log("CREATE NEW", (tmp && tmp.length));
 			tmp = new Array(length + 1).join(" ");
-			console.log(">>>", tmp.length);
 		}
 		tmp2 = tmp.substr(0, i * this.sizeOfChunk) + data;
-		console.log(">>> [" + tmp2[i * this.sizeOfChunk] + "]", tmp.length, data[0]);
 		if ((i + 1) * this.sizeOfChunk < length) {
-			console.log("ADD END");
 			tmp2 += tmp.substr((i + 1) * this.sizeOfChunk);
-			console.log(">>>", tmp.length);
 		}
 		this.save(key, tmp2);
 	}
