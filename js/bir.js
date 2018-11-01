@@ -175,10 +175,14 @@ function birJS(
 			this.debug ? console.log("channel.onmessage :", message):null;
 			data = message.data.split("_%_");
 			if (data.length > 1 && data[0] == "noData") {
-				// TODO if no data = delete from this peer have the data
+				// if the peer do not have this data remove from the list
+				peerData = this.getPeerFromChannel(channel).datas;
+				if (peerData.indexOf(data[1]) >= 0) {
+					peerData.splice(peerData.indexOf(data[1]), 1);
+				}
+				// TODO check if another peer can share.
 				getDataFromURL(data[1]);
 			} else if (data.length > 1 && data[0] == "giveData") {
-				// TODO if chunk save chunk
 				if (data.length > 3) {
 					data[2] = parseFloat(data[2]);
 					data[3] = parseInt(data[3]);
