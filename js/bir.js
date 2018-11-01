@@ -34,7 +34,7 @@ function birJS(
 	this.room=room;
 	this.save=save;
 	this.debug = debug;
-	this.sizeOfChunk = 10 * 1024; // in KB
+	this.sizeOfChunk = 10 * 256; // in KB
 
 
 	// Connection to the server socket IO
@@ -42,7 +42,7 @@ function birJS(
 	this.socketIO = io.connect(socketServer + ":" + socketPort);
 
 	/**
-	 * Socket IO function when you just joined a room
+	 * Socket IO funciton when you just joined a room
 	 * @param  {String}		The room joined
 	 * @param  {String}		Your socket IO ID
 	 * @param  {Object}		Socker IO ID of all other peers in the room
@@ -191,7 +191,7 @@ function birJS(
 						this.dispatchEvent(new CustomEvent('datas:' + data[1], {detail: {datas: this.getLocal(data[1]), from: "fromPeer"}}));
 					}
 				} else {
-					this.debug ? console.log("giveData :", data[1], data[2].length):null;
+					this.debug ? console.log("giveData :", data[1], data[2][0], data[2].length):null;
 					this.save(data[1], data[2]);
 					this.sendToPeers("haveData" + "_%_" + data[1]);
 					this.dispatchEvent(new CustomEvent('datas:' + data[1], {detail: {datas: this.getLocal(data[1]), from: "fromPeer"}}));
@@ -211,11 +211,11 @@ function birJS(
 					dataToSend = this.getLocal(data[1]);
 					console.log(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> TYPEOF ", typeof dataToSend, dataToSend.length);
 					// If the Data to send is to big for the webRTC Channel, we need to cut in chunk
-					if (dataToSend.length > this.sizeOfChunk ) {
+					if (dataToSend.length > this.sizeOfChunk) {
 						numOfChunk = (dataToSend.length / this.sizeOfChunk);
 						for (var i = 0; i < numOfChunk; i++) {
 							chunkToSend = dataToSend.substring(i * this.sizeOfChunk, (i + 1) * this.sizeOfChunk);
-							console.log("SEND CHUNK: >>> ", numOfChunk, dataToSend.length, i, this.sizeOfChunk, chunkToSend.length);
+							console.log("SEND CHUNK: >>> ", numOfChunk, chunkToSend[0], dataToSend.length, i, this.sizeOfChunk, chunkToSend.length);
 							channel.send("giveData" + "_%_" + data[1] + "_%_" + numOfChunk + "_%_" + i + "_%_" + chunkToSend);
 						}
 					} else {
@@ -389,8 +389,8 @@ function birJS(
 			console.log(">>>", tmp.length);
 		}
 		tmp2 = tmp.substr(0, i * this.sizeOfChunk) + data;
-		console.log(">>>", tmp.length);
-		if ((i + 2) * this.sizeOfChunk < length) {
+		console.log(">>> [" + tmp2[i * this.sizeOfChunk] + "]", tmp.length, data[0]);
+		if ((i + 1) * this.sizeOfChunk < length) {
 			console.log("ADD END");
 			tmp2 += tmp.substr((i + 1) * this.sizeOfChunk);
 			console.log(">>>", tmp.length);
