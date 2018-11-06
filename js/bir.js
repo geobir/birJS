@@ -108,6 +108,10 @@ function birJS(
 			if (peer) {
 				peer.channel = event.channel;
 			}
+			// If the user have data, send key to newpeer
+			// if () {
+
+			// }
 		};
 		return this.peers.push({id: IO_ID, peer: newPeerConnection, channel: null, datas:[]});
 	}
