@@ -30,7 +30,7 @@ function birJS(
 	this.configuration = configuration;
 	// this.hashFunction = hashFunction;
 	this.peers = [];
-	this.datas = {};
+	this.datas = [];
 	this.room=room;
 	this.save=save;
 	this.debug = debug;
@@ -109,9 +109,9 @@ function birJS(
 				peer.channel = event.channel;
 			}
 			// If the user have data, send key to newpeer
-			// if () {
+			if (false) {
 
-			// }
+			}
 		};
 		return this.peers.push({id: IO_ID, peer: newPeerConnection, channel: null, datas:[]});
 	}
@@ -375,6 +375,7 @@ function birJS(
 			this.datas[key] = data;
 		} else {
 			localStorage[key] = data;
+			this.datas.push(key);
 		}
 	}
 
