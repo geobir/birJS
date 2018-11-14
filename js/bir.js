@@ -108,9 +108,8 @@ function birJS(
 			if (peer) {
 				peer.channel = event.channel;
 			}
-			// If the user have data, send key to newpeer
-			if (false) {
-
+			if (this.datas.length > 0) {
+				event.channel.send("haveData" + "_%_" + this.datas.join("_%_"));
 			}
 		};
 		return this.peers.push({id: IO_ID, peer: newPeerConnection, channel: null, datas:[]});
@@ -204,7 +203,9 @@ function birJS(
 					this.dispatchEvent(new CustomEvent('datas:' + data[1], {detail: {datas: this.getLocal(data[1]), from: "fromPeer"}}));
 				}
 			} else if (data.length > 1 && data[0] == "haveData") {
-				this.getPeerFromChannel(channel).datas.push(data[1]);
+				for (var i = 1; i < data.length; i++) {
+					this.getPeerFromChannel(channel).datas.push(data[i]);
+				}
 			} else if (data.length > 1 && data[0] == "removeMyData") {
 				peer = this.getPeerFromChannel(channel);
 				index = peer.datas.indexOf(data[1]);
@@ -371,10 +372,8 @@ function birJS(
 	 * @param  {String} data The data
 	 */
 	this.save = function(key, data) {
-		if (this.save == "var") {
-			this.datas[key] = data;
-		} else {
-			localStorage[key] = data;
+		localStorage[key] = data;
+		if (this.datas.indexOf(key) == -1) {
 			this.datas.push(key);
 		}
 	}
