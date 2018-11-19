@@ -12,7 +12,7 @@ function logError(err) {
  * @param  {Object}		The Configuration of the iceServers
  * @param  {Function}	The hash function you whant to use (TODO)
  * @param  {String}		The SocketIO room you want to connect
- * @param  {String}		The way to save [var, cache{default}] datas
+ * @param  {String}		The way to save [indexDB, localStorage{default}] datas
  * @param  {Boolean}	The debug node
  * @return {Object}		himself
  */
@@ -22,7 +22,7 @@ function birJS(
 	configuration={'iceServers': [{'urls': 'stun:stun.l.google.com:19302'}]},
 	// hashFunction=hashCode,
 	room=window.location.pathname,
-	save="cache",
+	save="localStorage",
 	debug=false) {
 
 	this.socketServer = socketServer;
@@ -38,12 +38,27 @@ function birJS(
 	this.sizeOfChunk = 10 * 256; // in KB
 
 
-	// Connection to the server socket IO
-	// TODO: if socket io is not loaded, console error !
-	this.socketIO = io.connect(socketServer + ":" + socketPort);
+	/**
+	 * Init function
+	 */
+	function init() {
+		window.indexedDB = window.indexedDB || window.mozIndexedDB || window.webkitIndexedDB || window.msIndexedDB;
+		// if the IndexDB is the default save but the browser dosen't support it
+		if (this.save == "indexDB" && !window.indexedDB) {
+			this.save = "localStorage";
+		}
+		// check if socket IO is loaded
+		if (window.indexedDB && typeof(io) != 'undefined') {
+			// Connection to the server socket IO
+			this.socketIO = io.connect(socketServer + ":" + socketPort);
+		}
+	}
+
+	init();
+
 
 	/**
-	 * Socket IO funciton when you just joined a room
+	 * Socket IO function when you just joined a room
 	 * @param  {String}		The room joined
 	 * @param  {String}		Your socket IO ID
 	 * @param  {Object}		Socker IO ID of all other peers in the room
