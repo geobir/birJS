@@ -31,9 +31,10 @@ function birJS(
 	// this.hashFunction = hashFunction;
 	this.peers = [];
 	this.datas = [];
-	this.room=room;
-	this.save=save;
+	this.room = room;
+	this.save = save;
 	this.debug = debug;
+	this.isWebRTCReady = false
 	this.sizeOfChunk = 10 * 256; // in KB
 
 
@@ -108,6 +109,7 @@ function birJS(
 			if (peer) {
 				peer.channel = event.channel;
 			}
+			this.isWebRTCReady = true;
 			if (this.datas.length > 0) {
 				event.channel.send("haveData" + "_%_" + this.datas.join("_%_"));
 			}
@@ -130,6 +132,7 @@ function birJS(
 					id: event.candidate.sdpMid,
 					candidate: event.candidate.candidate
 				});
+				this.isWebRTCReady = true;
 			} else {
 				this.debug ? console.log('End of candidates.'):null;
 			}
@@ -291,16 +294,20 @@ function birJS(
 	 * @param  {String} data the string you want to send
 	 */
 	this.sendToPeer = function (peer, data) {
-		peer.channel.send(data);
+		if (this.isWebRTCReady) {
+			peer.channel.send(data);
+		}
 	}
 	/**
 	 * Sending datas to all peers
 	 * @param  {String} data the string you want to send
 	 */
 	this.sendToPeers = function (data) {
-		for (var i = 0; i < this.peers.length; i++) {
-			if(this.peers[i].channel && this.peers[i].channel.readyState == 'open') {
-				this.peers[i].channel.send(data);
+		if (this.isWebRTCReady) {
+			for (var i = 0; i < this.peers.length; i++) {
+				if(this.peers[i].channel && this.peers[i].channel.readyState == 'open') {
+					this.peers[i].channel.send(data);
+				}
 			}
 		}
 	}
@@ -313,6 +320,7 @@ function birJS(
 	 */
 	this.get = function (url, callback, hash=null){
 		this.debug ? console.log("this.get", url):null;
+		
 		// TODO check timeline / Hash of data
 		if (this.getLocal(url)) {
 			callback(url, this.getLocal(url), "fromMe");
@@ -323,12 +331,15 @@ function birJS(
 			this.debug ? console.log("datas", event):null;
 			callback(url, event.detail.datas, event.detail.from);
 		});
-		for (var i = 0; i < this.peers.length; i++) {
-			this.debug ? console.log("peer", this.peers[i], url, this.peers[i].channel && this.peers[i].channel.readyState == 'open' && this.peers[i].datas.includes(url)):null;
-			if (this.peers[i].channel && this.peers[i].channel.readyState == 'open' && this.peers[i].datas.includes(url)) {
-				this.debug ? console.log("======================== ><><>>< Data Found from peer ><><><>< ========================"):null;
-				this.peers[i].channel.send("getDataNews" + "_%_" + url);
-				return ;
+		// if WebRTC is ready
+		if (this.isWebRTCReady) {
+			for (var i = 0; i < this.peers.length; i++) {
+				this.debug ? console.log("peer", this.peers[i], url, this.peers[i].channel && this.peers[i].channel.readyState == 'open' && this.peers[i].datas.includes(url)):null;
+				if (this.peers[i].channel && this.peers[i].channel.readyState == 'open' && this.peers[i].datas.includes(url)) {
+					this.debug ? console.log("======================== ><><>>< Data Found from peer ><><><>< ========================"):null;
+					this.peers[i].channel.send("getDataNews" + "_%_" + url);
+					return ;
+				}
 			}
 		}
 		getDataFromURL(url);
