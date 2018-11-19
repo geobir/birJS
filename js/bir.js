@@ -12,7 +12,7 @@ function logError(err) {
  * @param  {Object}		The Configuration of the iceServers
  * @param  {Function}	The hash function you whant to use (TODO)
  * @param  {String}		The SocketIO room you want to connect
- * @param  {String}		The way to save [indexDB, localStorage{default}] datas
+ * @param  {String}		The way to save [indexedDB{default}, localStorage] datas
  * @param  {Boolean}	The debug node
  * @return {Object}		himself
  */
@@ -22,7 +22,7 @@ function birJS(
 	configuration={'iceServers': [{'urls': 'stun:stun.l.google.com:19302'}]},
 	// hashFunction=hashCode,
 	room=window.location.pathname,
-	save="localStorage",
+	save="indexedDB",
 	debug=false) {
 
 	this.socketServer = socketServer;
@@ -32,10 +32,15 @@ function birJS(
 	this.peers = [];
 	this.datas = [];
 	this.room = room;
-	this.save = save;
+	this.saveDB = save;
 	this.debug = debug;
 	this.isWebRTCReady = false
 	this.sizeOfChunk = 10 * 256; // in KB
+	// DB
+	this.dbName = "birJS";
+	this.dataBase = null;
+	this.db = null;
+	this.objectStore = null;
 
 
 	/**
@@ -43,12 +48,34 @@ function birJS(
 	 */
 	function init() {
 		window.indexedDB = window.indexedDB || window.mozIndexedDB || window.webkitIndexedDB || window.msIndexedDB;
-		// if the IndexDB is the default save but the browser dosen't support it
-		if (this.save == "indexDB" && !window.indexedDB) {
-			this.save = "localStorage";
+		window.IDBTransaction = window.IDBTransaction || window.webkitIDBTransaction;
+		// if the IndexedDB is the default save but the browser dosen't support it
+		if (this.saveDB == "indexedDB" && !window.indexedDB || !window.IDBTransaction) {
+			this.saveDB = "localStorage";
+		}
+		// invi of indexedDB
+		if (this.saveDB == "indexedDB") {
+			this.dataBase = window.indexedDB.open(this.dbName, 1);
+			thisParent = this;
+			this.dataBase.onsuccess = function (evt) {
+				thisParent.db = thisParent.dataBase.result;
+			};
+
+			this.dataBase.onerror = function (evt) {
+				console.log("IndexedDB error: " + evt.target.errorCode);
+				thisParent.save = "localStorage";
+			};
+
+			this.dataBase.onupgradeneeded = function (evt) {
+				thisParent.objectStore = evt.currentTarget.result.createObjectStore("data", { keyPath: "id"});
+
+				thisParent.objectStore.createIndex("data", "data", { unique: false });
+				thisParent.objectStore.createIndex("hash", "hash", { unique: true });
+
+			};
 		}
 		// check if socket IO is loaded
-		if (window.indexedDB && typeof(io) != 'undefined') {
+		if (typeof(io) != 'undefined') {
 			// Connection to the server socket IO
 			this.socketIO = io.connect(socketServer + ":" + socketPort);
 		}
@@ -366,11 +393,30 @@ function birJS(
 	 * @return {String}     The data you ask for
 	 */
 	this.getLocal = function(key) {
-		if (this.save == "var") {
+		if (this.saveDB == "indexedDB") {
+			// TODO return indexDB data
+			return null;
+			return this.datas[key] ? this.datas.hasOwnProperty(key) : null;
+		} else {
+			return localStorage[key];
+		}
+	}
+
+
+	/**
+	 * TODO Return true if tyou have localy the Data
+	 * @param  {String} key The key of the data you want, basicly the url
+	 * @return {Boolean}     True if the data is store localy, else false
+	 */
+	this.hasLocal = function(key) {
+		return false;
+		if (this.saveDB == "indexedDB") {
+			return null;
 			return this.datas[key] ? this.datas.hasOwnProperty(key) : null;
 		}
 		return localStorage[key];
 	}
+
 
 	/**
 	 * Get a chunk of local data with the key
@@ -388,9 +434,9 @@ function birJS(
 	 * @param  {String} key The key of the data you want, basicly the url
 	 * @return {Int}     	The length of the data
 	 */
-	this.getLenghtOfData = function(key) {
-		return this.datas[key] = data.length;
-	}
+	// this.getLenghtOfData = function(key) {
+	// 	return this.datas[key] = data.length;
+	// }
 
 	/**
 	 * Save data with the good methode
@@ -398,11 +444,23 @@ function birJS(
 	 * @param  {String} data The data
 	 */
 	this.save = function(key, data) {
-		localStorage[key] = data;
-		if (this.datas.indexOf(key) == -1) {
-			this.datas.push(key);
+		if (this.saveDB = "indexedDB"){
+			console.log(this.dbName, this.db);
+			var transaction = this.db.transaction("data", "readwrite");
+			var objectStore = transaction.objectStore("data");
+			var request = objectStore.add({id: key, data: data});
+			thisParent = this;
+			request.onsuccess = function (evt) {
+				console.log("succeeded to save in the DB");
+			};
+		} else {
+			if (this.datas.indexOf(key) == -1) {
+				this.datas.push(key);
+			}
+			localStorage[key] = data;
 		}
 	}
+
 
 	/**
 	 * Save only part of data
